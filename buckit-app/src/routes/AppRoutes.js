@@ -1,13 +1,16 @@
 import { Routes, Route } from 'react-router-dom';
-import UserDashboard from '../pages/UserDashboard';
 import Subscriptions from '../pages/SubscriptionsPage';
+import Login from '../components/UserLoginAndRegistration/Login';
+import SignUp from '../components/UserLoginAndRegistration/SignUp';
 
 export const AppRoutes = (props) => {
+
     return (
         <Routes>
-            <Route exact path='/' element={<UserDashboard />} />
+            <Route exact path='/' element={<Login />} />
+            <Route exact path='/signup' element={<SignUp />} />
 
-            <Route path='/subscriptions' element={<Subscriptions />} />
+            <Route path='/subscriptions/:user_id/:token' element={<Subscriptions />} />
 
         </Routes>
     )

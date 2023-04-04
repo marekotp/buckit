@@ -1,17 +1,17 @@
 import NavBar from "../components/NavBar"
-import AddSubscription from "../components/SubscriptionsPage/AddSubscription"
 import SubscriptionsList from "../components/SubscriptionsPage/SubscriptionList"
-import Test from "../components/SubscriptionsPage/Test"
+import Footer from "../components/Footer";
+
+
 
 export default function SubscriptionsPage(){
     return(
-        <div>
+        <div className="App">
             <NavBar />
-
-            
-            <AddSubscription />
-            <SubscriptionsList />
-            <Test />
+           
+            <SubscriptionsList />      
+           
+            <Footer />
         </div>
     )
 }

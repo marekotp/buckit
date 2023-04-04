@@ -1,120 +1,155 @@
-import { useState } from 'react';
-import { Table, Collapse, Button } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
-import CancelRemindersForm from './CancelRemindersForm';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import '../../App.css';
 
-const data = [
-  {
-    name: 'Netflix',
-    price: '$32.99',
-    renewalDate: '2022-04-01',
-    billingCycle: 'Monthly',
-    category: 'Entertainment'
-  },
-  {
-    name: 'Adobe',
-    price: '$120.00',
-    renewalDate: '2022-05-01',
-    billingCycle: 'Yearly',
-    category: 'Work'
-  },
-  {
-    name: 'Gym',
-    price: '$58.00',
-    renewalDate: '2022-06-01',
-    billingCycle: 'Bi-Weekly',
-    category: 'Lifestyle'
-  },
-];
+import Summary from './Summary';
+import AddSubscription from "./AddSubscription";
+import ExpandableRow from './ExpandableRow';
 
-const ExpandButton = ({ open, onClick }) => (
-  <Button variant="link" onClick={onClick}>
-    {open ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-  </Button>
-);
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Container } from '@mui/material';
+import { tableCellClasses } from "@mui/material/TableCell";
+import NoSubscriptionsPlaceHolder from './NoSubscriptionsPlaceHolder';
 
+export default function SubscriptionList() {
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [totalSpend, setTotalSpend] = useState(0);
+  const [userName, setUserName] = useState('');
+  const [user_id, setUserId] = useState('');
+  const [jwtToken, setJwtToken] = useState('');
 
-const ExpandableRow = ({ row }) => {
-  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('user_id');
+    const storedJwtToken = localStorage.getItem('jwtToken');
+    setUserId(storedUserId);
+    setJwtToken(storedJwtToken);
+    
 
-  const formattedDate = new Date(row.renewalDate).toLocaleDateString('en-GB');
+    async function getName() {
+      const response = await axios.get(`http://localhost:3001/api/users/user-search/${storedUserId}`, {
+        headers: {
+          'Authorization': `Bearer ${storedJwtToken}`
+        }
+      });
+      const user = response.data.users[0].first_name;
+      setUserName(user);      
+    } 
+  
+    async function fetchSubscriptions() {
+      try {
+        const response = await axios.get(`http://localhost:3001/api/users/${storedUserId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${storedJwtToken}`
+            }
+          });
+          const subscriptionsReturn = response.data
+          const userSubscriptions = subscriptionsReturn.filter(subscriptions => subscriptions.user_id === storedUserId);
+         
+          const totalSum = subscriptionsReturn.reduce((acc, cur) => {
+            let price = parseFloat(cur.price);
+      
+            if (cur.billing_cycle === "Yearly") {
+              price = price / 12;
+            } else if (cur.billing_cycle === "Bi-Weekly") {
+              price = price * 2.17;
+            } else if (cur.billing_cycle === "Weekly") {
+              price = price * 4.33;
+            }
+      
+            console.log(`Subscription: ${cur.name}, Price: ${price.toFixed(2)}, Billing Cycle: ${cur.billing_cycle}`);
+      
+            return acc + price;
+          }, 0);
 
+          console.log(`Total Sum: ${totalSum.toFixed(2)}`);
+          
+          setSubscriptions(userSubscriptions);
+          setTotalSpend(parseFloat(totalSum.toFixed(2)));
+        } catch (err) {
+          console.error(err);
+        }
+    }
+  
+    if (storedUserId && storedJwtToken) {
+      getName();
+      fetchSubscriptions();
+    }
+  }, []);
+
+  const fetchLatestSubscriptions = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3001/api/users/${user_id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${jwtToken}`
+            }
+          });
+      const subscriptionsReturn = response.data
+      const userSubscriptions = subscriptionsReturn.filter(subscriptions => subscriptions.user_id === user_id)
+
+      const totalSum = subscriptionsReturn.reduce((acc, cur) => {
+        let price = parseFloat(cur.price);
+  
+        if (cur.billing_cycle === "Yearly") {
+          price = price / 12;
+        } else if (cur.billing_cycle === "Bi-Weekly") {
+          price = price * 2;
+        } else if (cur.billing_cycle === "Weekly") {
+          price = price * 4;
+        }
+  
+        console.log(`Subscription: ${cur.name}, Price: ${price.toFixed(2)}, Billing Cycle: ${cur.billing_cycle}`);
+  
+        return acc + price;
+      }, 0);
+
+      console.log(`Total Sum: ${totalSum.toFixed(2)}`);
+      
+      setSubscriptions(userSubscriptions);
+      setTotalSpend(parseFloat(totalSum.toFixed(2)));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <>
-      <div className={'row-spacing'}></div>
-      <tr>
-        <td className="text-center align-middle">{row.name}</td>
-        <td className="text-left align-middle border-zero">{row.price}</td>
-        <td className="text-left align-middle border-zero">{formattedDate}</td>
-        <td className="text-left align-middle border-zero">{row.billingCycle}</td>
-        <td>
-          <ExpandButton open={open} onClick={() => setOpen(!open)} />
-        </td>
-      </tr>
+      <Summary totalSpend={totalSpend} name={userName}/>
+
+      <AddSubscription onAddSubscription={fetchLatestSubscriptions} user_id={user_id}/>
       
-
-      <tr className={open ? null : 'collapsed-row'}>
-        <td colSpan={5}>
-          <Collapse in={open}>
-            <div>
-              <Table bordered>
-                <tbody  className='borderless'>
-                  <tr>
-                    <td><h4 >Details:</h4></td>
-                    <td><h4>Cancellation Reminder Settings:</h4></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 15 }}>
-                        <ul className='no-bullets'>
-                          <li><strong>Name:</strong> {row.name}</li>
-                          <li><strong>Price:</strong> {row.price}</li>
-                          <li><strong>Renewal Date:</strong> {formattedDate}</li>
-                          <li><strong>Billing Cycle:</strong> {row.billingCycle}</li>
-                          <li><strong>Category:</strong> {row.category}</li>
-                        </ul>   
-                      </div>
-                    </td>
-
-                    <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 15 }}>
-                        <h5>{formattedDate}</h5>
-                        <CancelRemindersForm />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
+      <Container sx={{mb: 3}}>
+          <h3 style={{marginBottom: 25}}><strong>Subscriptions List</strong></h3>
+          <TableContainer sx={{maxWidth: 'auto'}}>
+            <Table sx={{[`& .${tableCellClasses.root}`]: {borderBottom: "none",}}}>
+                <TableHead>
+                  <TableRow >
+                    <TableCell>Name</TableCell>
+                    <TableCell>Price</TableCell>
+                    <TableCell>Renewal Date</TableCell>
+                    <TableCell>Billing Cycle</TableCell>
+                    <TableCell>Reminders On</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell />
+                  </TableRow>
+                </TableHead>
+                {subscriptions.length === 0 ? (
+                  <TableBody>
+                      <TableCell colSpan={7}>
+                        <NoSubscriptionsPlaceHolder />
+                      </TableCell>
+                  </TableBody>
+                ) : (
+                  <TableBody>
+                    {subscriptions.map((subscription) => (
+                      <ExpandableRow key={subscription.subscription_id} row={subscription} updateTable={fetchLatestSubscriptions}></ExpandableRow>
+                    ))}
+                  </TableBody>
+                )}
               </Table>
-            </div>
-          </Collapse>
-        </td>
-      </tr>
+          </TableContainer>
+      </Container>
     </>
-  );
-};
-
-export default function SubscriptionList() {
-  return (
-    <div className="container">
-      <Table striped bordered>
-        <thead className='borderless'>
-          <tr>
-            <th className={'text-left'}>Name</th>
-            <th className={'text-left'}>Price</th>
-            <th className={'text-left'}>Renewal Date</th>
-            <th className={'text-left'}>Billing Cycle</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row) => (
-            <ExpandableRow key={row.name} row={row} />
-          ))}
-        </tbody>
-      </Table>
-    </div>
+    
   );
 };
