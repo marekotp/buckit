@@ -23,10 +23,10 @@ const notifyUser = async () => {
             name: user.first_name,
           },
           from: {
-            email: 'marekotp@gmail.com',
+            email: 'ENTER YOUR EMAIL IN HERE',
             name: 'Buckit',
           },
-          templateId: 'd-a126eb6d358a4f778a93be469ae9b676',
+          templateId: '',
           dynamicTemplateData: {
             name: user.first_name,
             subName: subscription.name
